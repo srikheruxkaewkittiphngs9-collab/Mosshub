@@ -1,0 +1,418 @@
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local Player = Players.LocalPlayer
+
+-- ✅ GUI หลัก
+local introGui = Instance.new("ScreenGui")
+introGui.Name = "MosHubIntro"
+introGui.IgnoreGuiInset = true
+introGui.ResetOnSpawn = false
+introGui.Parent = Player:WaitForChild("PlayerGui")
+
+-- ☁️ พื้นหลังควันสีเขียวเรืองแสง
+local smoke = Instance.new("ImageLabel", introGui)
+smoke.Size = UDim2.new(1, 0, 1, 0)
+smoke.BackgroundTransparency = 1
+smoke.Image = "rbxassetid://6885837595" -- texture ควัน
+smoke.ImageTransparency = 0.5
+smoke.ImageColor3 = Color3.fromRGB(0, 255, 100) -- 💚 ควันสีเขียว
+smoke.ScaleType = Enum.ScaleType.Tile
+smoke.TileSize = UDim2.new(3, 0, 3, 0)
+smoke.ZIndex = 0
+
+task.spawn(function()
+	while introGui.Parent do
+		smoke.Position = smoke.Position + UDim2.new(0.001, 0, 0, 0)
+		task.wait(0.02)
+	end
+end)
+
+-- 🌈 กรอบสายรุ้งกลางจอ
+local border = Instance.new("Frame", introGui)
+border.AnchorPoint = Vector2.new(0.5, 0.5)
+border.Position = UDim2.new(0.5, 0, 0.5, 0)
+border.Size = UDim2.new(0, 520, 0, 220)
+border.BackgroundTransparency = 1
+border.ZIndex = 1
+
+-- 🌀 เอฟเฟกต์สีรุ้งรอบกรอบ
+local rainbow = Instance.new("UIGradient", border)
+rainbow.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+	ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 127, 0)),
+	ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 255, 0)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 0)),
+	ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 0, 255)),
+	ColorSequenceKeypoint.new(0.83, Color3.fromRGB(75, 0, 130)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(148, 0, 211))
+}
+rainbow.Rotation = 0
+
+-- หมุนสีรุ้งรอบกรอบ
+task.spawn(function()
+	while introGui.Parent do
+		rainbow.Rotation = (rainbow.Rotation + 1) % 360
+		task.wait(0.02)
+	end
+end)
+
+-- กรอบเรืองแสง
+local borderStroke = Instance.new("UIStroke", border)
+borderStroke.Thickness = 7
+borderStroke.Color = Color3.fromRGB(255, 255, 255)
+borderStroke.Transparency = 0.25
+borderStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+-- 🌸 ตัวหนังสือ "บังมอสฮับ"
+local title = Instance.new("TextLabel", border)
+title.AnchorPoint = Vector2.new(0.5, 0.5)
+title.Position = UDim2.new(0.5, 0, 0.5, 0)
+title.Size = UDim2.new(1, 0, 1, 0)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.FredokaOne
+title.TextScaled = true
+title.Text = ""
+title.ZIndex = 2
+
+-- เงาเรืองแสงชมพูม่วง
+local glow = Instance.new("UIStroke", title)
+glow.Thickness = 3
+glow.Color = Color3.fromRGB(255, 150, 255)
+glow.Transparency = 0.4
+
+-- ✨ เอฟเฟกต์พิมพ์ไวขึ้น (0.1 วินาทีต่อตัว)
+local text = "บังมอสฮับ"
+for i = 1, #text do
+	title.Text = string.sub(text, 1, i)
+	task.wait(0.1)
+end
+
+-- เอฟเฟกต์เบลอแสง
+local blur = Instance.new("BlurEffect", Lighting)
+for i = 1, 15 do
+	blur.Size = i * 1.5
+	borderStroke.Thickness = 5 + math.sin(i / 2)
+	task.wait(0.02)
+end
+
+-- แสดงข้อความค้างไว้ 2 วินาที
+task.wait(2)
+
+-- เอฟเฟกต์ค่อย ๆ จางหาย
+for i = 1, 15 do
+	smoke.ImageTransparency = 0.5 + i / 15
+	title.TextTransparency = i / 15
+	borderStroke.Transparency = i / 15
+	blur.Size = math.max(0, blur.Size - 2)
+	task.wait(0.04)
+end
+
+blur:Destroy()
+introGui:Destroy()
+
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local StarterGui = game:GetService("StarterGui")
+local Lighting = game:GetService("Lighting")
+local HttpService = game:GetService("HttpService")
+
+-- ================== Time / Expire ==================
+local function parseTime(str)
+	local y,m,d,H,M,S = string.match(str,"(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
+	return os.time({year=tonumber(y),month=tonumber(m),day=tonumber(d),hour=tonumber(H),min=tonumber(M),sec=tonumber(S)})
+end
+local expireTime = parseTime("2025-10-31 23:59:59")
+local startTime = os.time()
+local expired = false
+local function valid() return os.time() <= expireTime and not expired end
+local function rv(f) if valid() then f() else StarterGui:SetCore("SendNotification",{Title="สคริปต์ปิดอัปเดต",Text="สคริปต์หมดอายุแล้ว",Duration=5}) end end
+
+local DISCORD_LINK = "https://discord.gg/qpsEcM3j"
+
+-- ================== Expired Screen ==================
+local function showExpiredScreen()
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "MosHub_Expired"
+    gui.ResetOnSpawn = false
+    gui.Parent = Player:WaitForChild("PlayerGui")
+
+    local bg = Instance.new("Frame", gui)
+    bg.Size = UDim2.new(1,0,1,0)
+    bg.Position = UDim2.new(0,0,0,0)
+    bg.BackgroundTransparency = 1
+
+    local label = Instance.new("TextLabel", bg)
+    label.Size = UDim2.new(1,0,0.2,0)
+    label.Position = UDim2.new(0,0,0.35,0)
+    label.BackgroundTransparency = 1
+    label.Text = "⚠️ รอสคริปต์อัปเดต ⚠️"
+    label.TextScaled = true
+    label.TextColor3 = Color3.fromRGB(255,50,50)
+    label.Font = Enum.Font.SourceSansBold
+
+    local btn = Instance.new("TextButton", bg)
+    btn.Size = UDim2.new(0,300,0,50)
+    btn.Position = UDim2.new(0.5,-150,0.6,0)
+    btn.Text = "คัดลอกลิงก์ Discord"
+    btn.TextScaled = true
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.BackgroundColor3 = Color3.fromRGB(30,144,255)
+    btn.AutoButtonColor = true
+
+    btn.MouseButton1Click:Connect(function()
+        if setclipboard then
+            pcall(function() setclipboard(DISCORD_LINK) end)
+            StarterGui:SetCore("SendNotification",{Title="คัดลอกแล้ว",Text="ลิงก์ Discord ถูกคัดลอกแล้ว",Duration=4})
+        else
+            StarterGui:SetCore("SendNotification",{Title="ไม่สามารถคัดลอกได้",Text="Executor ของคุณไม่รองรับ setclipboard",Duration=4})
+        end
+    end)
+end
+
+if os.time() > expireTime then
+    showExpiredScreen()
+    return
+end
+
+-- ================== Load UI Framework ==================
+local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/x2zu/OPEN-SOURCE-UI-ROBLOX/refs/heads/main/X2ZU%20UI%20ROBLOX%20OPEN%20SOURCE/DummyUi-leak-by-x2zu/fetching-main/Tools/Framework.luau"))()
+local w = lib:Window({
+    Title="Mos Hub | by บังมอส น้ะจ้ะ",
+    Desc="Mos Hub on top",
+    Icon=105059922903197,
+    Theme="Dark",
+    Config={Keybind=Enum.KeyCode.P,Size=UDim2.new(0,700,0,520)},
+    CloseUIButton={Enabled=true,Text="Mos Hub"}
+})
+
+-- ================== FPS Display ==================
+local fpsText = Drawing.new("Text")
+fpsText.Text = "FPS: 0"; fpsText.Size = 22; fpsText.Color = Color3.fromRGB(0,255,0); fpsText.Center = true; fpsText.Outline = true; fpsText.Visible = true
+local dragging, mousePos, fpsPos = false, Vector2.new(), Vector2.new(150,50)
+
+UserInputService.InputBegan:Connect(function(i)
+    if expired then return end
+    if i.UserInputType == Enum.UserInputType.MouseButton1 then
+        local m = UserInputService:GetMouseLocation()
+        if (Vector2.new(m.X,m.Y)-fpsPos).Magnitude <= 50 then
+            dragging = true
+            mousePos = Vector2.new(m.X,m.Y)-fpsPos
+        end
+    end
+end)
+UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging=false end end)
+UserInputService.InputChanged:Connect(function(i)
+    if expired then return end
+    if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+        local m = UserInputService:GetMouseLocation()
+        fpsPos = Vector2.new(m.X,m.Y)-mousePos
+    end
+end)
+
+local lastTick = tick()
+RunService.RenderStepped:Connect(function()
+    if expired then fpsText.Visible=false return end
+    local now = tick()
+    local fps = math.floor(1 / math.max((now-lastTick), 0.000001))
+    lastTick = now
+    fpsText.Text = "FPS: "..fps
+    fpsText.Position = fpsPos
+end)
+
+-- ================== Tab: ผู้เล่น ==================
+local admin = w:Tab({Title="ผู้เล่น"})
+admin:Section({Title="ฟังก์ชันแอดมิน"})
+local infiniteJump, noclip = false, false
+
+admin:Toggle({Title="กระโดดไม่จำกัด",Callback=function(v) if not expired then infiniteJump=v end end})
+admin:Slider({Title="กระโดดสูง",Min=0,Max=500,Value=50,Callback=function(v) if not expired and Player.Character and Player.Character:FindFirstChild("Humanoid") then Player.Character.Humanoid.JumpPower=v end end})
+admin:Slider({Title="วิ่งไว",Min=0,Max=500,Value=16,Callback=function(v) if not expired and Player.Character and Player.Character:FindFirstChild("Humanoid") then Player.Character.Humanoid.WalkSpeed=v end end})
+admin:Toggle({Title="เดินทะลุสิ่งของ (Noclip)",Callback=function(v) if not expired then noclip=v end end})
+
+RunService.Stepped:Connect(function()
+    if noclip and not expired and Player.Character then
+        for _,p in pairs(Player.Character:GetDescendants()) do
+            if p:IsA("BasePart") then p.CanCollide=false end
+        end
+    end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if infiniteJump and not expired and Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        Player.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+admin:Button({Title="Boot FPS (ลดคุณภาพ)",Callback=function()
+    if expired then return end
+    Lighting.GlobalShadows = false
+    Lighting.Brightness = 2
+    Lighting.FogEnd = 1000
+    Lighting.OutdoorAmbient = Color3.fromRGB(128,128,128)
+    StarterGui:SetCore("SendNotification", {Title="Mos Hub", Text="Boot FPS สำเร็จ! ภาพกากลงแล้ว", Duration=4})
+end})
+
+admin:Button({Title="รัน Infinite Yield",Callback=function() rv(function()
+    loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+end) end})
+
+-- ================== Tab: ESP ==================
+local es = w:Tab({Title="ESP"})
+es:Section({Title="ESP Box/Line/Distance / สิงมุมมอง"})
+local eb,el,ed=false,false,false
+es:Toggle({Title="Box",Callback=function(v) if not expired then eb=v end end})
+es:Toggle({Title="Line",Callback=function(v) if not expired then el=v end end})
+es:Toggle({Title="Distance",Callback=function(v) if not expired then ed=v end end})
+
+local targetViewPlayer = nil
+local isPossessing = false
+local originalCameraType = nil
+local originalCameraSubject = nil
+
+es:Section({Title="สิงมุมมอง"})
+local playerList = {}
+local selectedPlayerName = nil
+local function UpdatePlayerList()
+    playerList = {}
+    for _,pp in pairs(Players:GetPlayers()) do
+        if pp ~= Player then table.insert(playerList, pp.Name) end
+    end
+end
+UpdatePlayerList()
+Players.PlayerAdded:Connect(UpdatePlayerList)
+Players.PlayerRemoving:Connect(function(p) UpdatePlayerList() if selectedPlayerName == p.Name then selectedPlayerName = nil end end)
+
+es:Dropdown({Title="เลือกผู้เล่นเพื่อสิง",List=playerList,Callback=function(name) selectedPlayerName = name end})
+es:Button({Title="สิงมุมมองผู้เล่นที่เลือก",Callback=function()
+    if expired then return end
+    if not selectedPlayerName then StarterGui:SetCore("SendNotification",{Title="Mos Hub",Text="ยังไม่ได้เลือกผู้เล่น",Duration=3}) return end
+    local pp = Players:FindFirstChild(selectedPlayerName)
+    if not pp or not pp.Character or not pp.Character:FindFirstChild("HumanoidRootPart") then StarterGui:SetCore("SendNotification",{Title="Mos Hub",Text="ผู้เล่นไม่พร้อม",Duration=3}) return end
+
+    if isPossessing then StarterGui:SetCore("SendNotification",{Title="Mos Hub",Text="กำลังสิงอยู่แล้ว",Duration=3}) return end
+    originalCameraType = Workspace.CurrentCamera.CameraType
+    originalCameraSubject = Workspace.CurrentCamera.CameraSubject
+    isPossessing = true
+    targetViewPlayer = pp
+
+    Workspace.CurrentCamera.CameraType = Enum.CameraType.Scriptable
+    local rsConn
+    rsConn = RunService.RenderStepped:Connect(function()
+        if not isPossessing or not targetViewPlayer or not targetViewPlayer.Character or not targetViewPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            if rsConn then rsConn:Disconnect() end
+            return
+        end
+        local root = targetViewPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if root then
+            local cf = root.CFrame * CFrame.new(0, 1.5, -2) * CFrame.Angles(-0.1, 0, 0)
+            Workspace.CurrentCamera.CFrame = cf
+        end
+    end)
+    StarterGui:SetCore("SendNotification",{Title="Mos Hub",Text="เริ่มสิงมุมมอง: "..selectedPlayerName,Duration=3})
+end})
+
+es:Button({Title="ยกเลิกการสิง",Callback=function()
+    if not isPossessing then StarterGui:SetCore("SendNotification",{Title="Mos Hub",Text="ไม่ได้สิงอยู่",Duration=3}) return end
+    isPossessing = false
+    targetViewPlayer = nil
+    if originalCameraType then Workspace.CurrentCamera.CameraType = originalCameraType end
+    if originalCameraSubject and originalCameraSubject.Parent then Workspace.CurrentCamera.CameraSubject = originalCameraSubject end
+    StarterGui:SetCore("SendNotification",{Title="Mos Hub",Text="ยกเลิกการสิงแล้ว",Duration=3})
+end})
+
+-- 🔄 ปุ่มรีเซ็ทรายชื่อผู้เล่นในแท็บ ESP
+es:Button({Title="รีเซ็ทรายชื่อผู้เล่น",Callback=function()
+    if expired then return end
+    UpdatePlayerList()
+    StarterGui:SetCore("SendNotification",{Title="Mos Hub",Text="รีเฟรชรายชื่อผู้เล่นแล้ว!",Duration=3})
+end})
+
+-- ================== Tab: วาป ==================
+local wp = w:Tab({Title="วาป"})
+wp:Section({Title="วาปไปผู้เล่น"})
+local Wlist = {}
+local selectedPlayer = nil
+local function UpdateWlist()
+    Wlist = {}
+    for _,pp in pairs(Players:GetPlayers()) do
+        if pp~=Player then table.insert(Wlist, pp.Name) end
+    end
+end
+UpdateWlist()
+Players.PlayerAdded:Connect(UpdateWlist)
+Players.PlayerRemoving:Connect(UpdateWlist)
+
+wp:Dropdown({Title="เลือกผู้เล่น",List=Wlist,Callback=function(n) selectedPlayer = Players:FindFirstChild(n) end})
+wp:Button({Title="ยืนยันวาป",Callback=function()
+    if expired or not selectedPlayer then return end
+    if Player.Character and selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        Player.Character.HumanoidRootPart.CFrame = selectedPlayer.Character.HumanoidRootPart.CFrame
+    end
+end})
+
+-- 🔄 ปุ่มรีเซ็ทรายชื่อผู้เล่นในแท็บ วาป
+wp:Button({Title="รีเซ็ทรายชื่อผู้เล่น",Callback=function()
+    if expired then return end
+    UpdateWlist()
+    StarterGui:SetCore("SendNotification",{Title="Mos Hub",Text="รีเฟรชรายชื่อผู้เล่นแล้ว!",Duration=3})
+end})
+
+-- ================== Tab: ล่องหน ==================
+local inv = w:Tab({Title="ล่องหน"})
+inv:Section({Title="ล่องหน"})
+inv:Toggle({Title="ล่องหน",Callback=function(v)
+    if expired then return end
+    if Player.Character then
+        for _,o in pairs(Player.Character:GetDescendants()) do
+            if o:IsA("BasePart") and o.Name~="HumanoidRootPart" then
+                o.Transparency = v and 1 or 0
+                o.CanCollide = not v
+            end
+        end
+    end
+end})
+
+-- ================== Tab: บิน ==================
+local fly = w:Tab({Title="บิน"})
+fly:Button({Title="เปิดระบบบิน",Callback=function()
+    rv(function()
+        loadstring("\108\111\97\100\115\116\114\105\110\103\40\103\97\109\101\58\72\116\116\112\71\101\116\40\40\39\104\116\116\112\115\58\47\47\103\105\115\116\46\103\105\116\104\117\98\117\115\101\114\99\111\110\116\101\110\116\46\99\111\109\47\109\101\111\122\111\110\101\89\84\47\98\102\48\51\55\100\102\102\57\102\48\97\55\48\48\49\55\51\48\52\100\100\100\54\55\102\100\99\100\51\55\48\47\114\97\119\47\101\49\52\101\55\52\102\52\50\53\98\48\54\48\100\102\53\50\51\51\52\51\99\102\51\48\98\55\56\55\48\55\52\101\98\51\99\53\100\50\47\97\114\99\101\117\115\37\50\53\50\48\120\37\50\53\50\48\102\108\121\37\50\53\50\48\50\37\50\53\50\48\111\98\102\108\117\99\97\116\111\114\39\41\44\116\114\117\101\41\41\40\41\10\10")()
+    end)
+end})
+
+-- ================== Tab: เวลาสคริปต์ ==================
+local tt = w:Tab({Title="เวลาสคริปต์"})
+tt:Section({Title="หมดอายุ"})
+local lab = tt:Label({Title="หมดอายุวันที่ 31/10/2025"})
+tt:Label({Title="วันที่เริ่ม: "..os.date("%d/%m/%Y %H:%M:%S",startTime)})
+
+spawn(function()
+    while true do
+        local rem = expireTime - os.time()
+        if rem<=0 then
+            lab:Set("⚠️ สคริปต์หมดอายุแล้ว ⚠️")
+            if not expired then
+                expired=true
+                pcall(function() w:Close() end)
+                fpsText.Visible = false
+                isPossessing = false
+                targetViewPlayer = nil
+                if originalCameraType then Workspace.CurrentCamera.CameraType = originalCameraType end
+                if originalCameraSubject and originalCameraSubject.Parent then pcall(function() Workspace.CurrentCamera.CameraSubject = originalCameraSubject end) end
+                showExpiredScreen()
+            end
+        else
+            local d = math.floor(rem/86400)
+            local h = math.floor((rem%86400)/3600)
+            local m = math.floor((rem%3600)/60)
+            local s = rem%60
+            lab:Set(string.format("เวลาที่เหลือ: %02d วัน %02d:%02d:%02d", d, h, m, s))
+        end
+        task.wait(1)
+    end
+end)
